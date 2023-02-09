@@ -1,0 +1,7 @@
+HOST = 'host'
+USER = 'user'
+PASS = 'pass'
+DB = 'db_name'
+KEY = 'key'
+DEFAULT_USER = 'user'
+DEFAULT_PASS = 'pass'

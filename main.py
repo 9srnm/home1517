@@ -1,4 +1,4 @@
-import os
+from settings import *
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, redirect, url_for
@@ -9,9 +9,8 @@ from flask_login import LoginManager, login_user, logout_user, login_required
 import forms
 import models
 
-load_dotenv('.env')
 app = Flask(__name__)
-app.secret_key = os.getenv('KEY')
+app.secret_key = KEY
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -225,7 +224,7 @@ def second_floor():
 if __name__ == '__main__':
     models.initialize()
     try:
-        models.User.create_user('Integrals', '1517')
+        models.User.create_user(DEFAULT_USER, DEFAULT_PASS)
     except ValueError:
         pass
     app.run(debug=True, host='0.0.0.0')

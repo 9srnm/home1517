@@ -1,17 +1,14 @@
-import os
-
 from flask_bcrypt import generate_password_hash
 from flask_login import UserMixin
 from peewee import *
 
-from dotenv import load_dotenv
-load_dotenv()
+from settings import *
 
-DATABASE = MySQLDatabase(host=os.getenv('HOST'),
+DATABASE = MySQLDatabase(host=HOST,
                          port=3306,
-                         user=os.getenv('ROOT'),
-                         password=os.getenv('PASSWORD'),
-                         database=os.getenv('DB'))
+                         user=USER,
+                         password=PASS,
+                         database=DB)
 
 
 class User(UserMixin, Model):
