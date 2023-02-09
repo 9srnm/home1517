@@ -1,37 +1,34 @@
 #include <Wire.h>
 #include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 #include <DHT.h>
 
-int auto_light = 0;
-int light_val = 0;
-int light_status = 0;
-int vent_status = 0;
-int heat_status = 0;
+int auto_light, light_val, light_status, vent_status, heat_status, red, green, blue, auto_heat, temp_auto, httpCode;
 
 #define DHTPIN 14
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
-const char *ssid = "sch1517";       // имя вашей wifi точки доступа
-const char *password = "Gfhjvyfz "; // пароль wifi
-const IPAddress host(176, 119, 157, 37);
-const int httpPort = 80;
+const char* ssid = "POVED19";       // имя вашей wifi точки доступа
+const char* password = ""; // пароль wifi
 DynamicJsonDocument doc(1024);
 
 void setup()
 {
   Wire.begin();
-  Serial.begin(9600);
+  Serial.begin(115200);
   dht.begin();
 
   pinMode(A0, INPUT);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) // подключение к точке
-  {
-    delay(500);
+
+  Serial.print("Connecting to Wi-Fi...");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print(".");
   }
 }
 
@@ -39,61 +36,61 @@ void setup()
 void loop()
 {
   String c;
-  WiFiClient client;
-  if (!client.connect(host, httpPort))
-  {
-    Serial.println("connection failed");
-    return;
-  }
   float hum = dht.readHumidity();
   float temp = dht.readTemperature();
-  Serial.println(hum);
-  Serial.println(temp);
-  client.print("GET /second_floor?light_val=" + String(light_val) + "&hum=" + String(hum, 2) + "&temp=" + String(temp, 2) + "\r\n" + "Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
-  unsigned long timeout = millis();
-  while (client.available() == 0)
-  {
-    if (millis() - timeout > 1000)
-    {
-      Serial.println("Client Timeout");
-      client.stop();
-      return;
+//  Serial.println(hum);
+//  Serial.println(temp);
+
+  if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
+
+    HTTPClient http;  //Declare an object of class HTTPClient
+//    Serial.println(String(light_val));
+    http.begin("https://home.sklyar.app/second_floor?light_val=" + String(light_val) + "&hum=" + String(hum, 2) + "&temp=" + String(temp, 2), "3E 0A 7F AE 69 FE 1B A5 A6 AB CA F1 B0 8C 3A 1E F9 26 5A 5D");  //Specify request destination
+    httpCode = http.GET();                                  //Send the request
+
+    if (httpCode > 0) { //Check the returning code
+
+      String payload = http.getString();   //Get the request response payload
+      c = payload;
     }
+    else {
+      Serial.println(httpCode);
+    }
+
+    http.end();   //Close connection
+
+  }
+  else {
+    Serial.println("No connection to Wi-Fi!");
   }
 
-  bool new_data = true;
-  while (client.available() && new_data)
-  {
-    String line = client.readStringUntil('}');
-    c += line;
-    c += '}';
-    new_data = false;
-  }
   String a = c.substring(c.indexOf('{'));
   deserializeJson(doc, a);
 
   Serial.println(a);
-  int red = doc["red2"];
-  int green = doc["green2"];
-  int blue = doc["blue2"];
-  auto_light = doc["auto_light2"];
-  light_status = doc["light_status2"];
-  vent_status = doc["vent"];
-  heat_status = doc["heat"];
-  int auto_heat = doc["auto_heat"];
-  int temp_auto = doc["temp_auto"];
-  if (auto_heat) {
-    if (temp < temp_auto) {
-      vent_status = 0;
-      heat_status = 1;
-    }
-    else if (temp_auto <= temp && temp < temp_auto + 1) {
-      vent_status = 0;
-      heat_status = 0;
-    }
-    else {
-      vent_status = 1;
-      heat_status = 0;
+  if (httpCode > 0) {
+    red = doc["red2"];
+    green = doc["green2"];
+    blue = doc["blue2"];
+    auto_light = doc["auto_light2"];
+    light_status = doc["light_status2"];
+    vent_status = doc["vent"];
+    heat_status = doc["heat"];
+    auto_heat = doc["auto_heat"];
+    temp_auto = doc["temp_auto"];
+    if (auto_heat) {
+      if (temp < temp_auto) {
+        vent_status = 0;
+        heat_status = 1;
+      }
+      else if (temp_auto <= temp && temp < temp_auto + 1) {
+        vent_status = 0;
+        heat_status = 0;
+      }
+      else {
+        vent_status = 1;
+        heat_status = 0;
+      }
     }
   }
 

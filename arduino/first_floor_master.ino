@@ -1,77 +1,72 @@
 #include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 #include <Wire.h>
 
-const char *ssid = "sch1517";       // имя вашей wifi точки доступа
-const char *password = "Gfhjvyfz "; // пароль wifi
-const IPAddress host(176, 119, 157, 37);
-const int httpPort = 80;
+const char *ssid = "POVED19";       // имя вашей wifi точки доступа
+const char *password = ""; // пароль wifi
 DynamicJsonDocument doc(1024);
 
-int auto_light = 0;
-int light_val = 0;
-int light_status = 0;
+int auto_light, light_val, light_status, red, green, blue,
+door, httpCode;
 
 void setup() {
-  Serial.begin(115200);
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-
   Wire.begin();
+  Serial.begin(115200);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED) // подключение к точке
-  {
-    delay(500);
+  Serial.print("Connecting to Wi-Fi...");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print(".");
   }
-
 }
 
 void loop() {
   String c;
-  WiFiClient client;
-  if (!client.connect(host, httpPort))
-  {
-    Serial.println("connection failed");
-    return;
-  }
-  client.print(String("GET /first_floor\r\nHost: " + String(host) + "\r\nConnection: close\r\n\r\n"));
+//  client.print(String("GET /first_floor\r\nHost: " + String(host) + "\r\nConnection: close\r\n\r\n"));
 
-  unsigned long timeout = millis();
+  if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
 
-  while (client.available() == 0)
-  {
-    if (millis() - timeout > 1000)
-    {
-      Serial.println("Client Timeout");
-      client.stop();
-      return;
+    HTTPClient http;  //Declare an object of class HTTPClient
+//    Serial.println(String(light_val));
+    http.begin("https://home.sklyar.app/first_floor", "3E 0A 7F AE 69 FE 1B A5 A6 AB CA F1 B0 8C 3A 1E F9 26 5A 5D");  //Specify request destination
+    httpCode = http.GET();                                  //Send the request
+
+    if (httpCode > 0) { //Check the returning code
+
+      String payload = http.getString();   //Get the request response payload
+      c = payload;
     }
+    else {
+      Serial.println(httpCode);
+    }
+
+    http.end();   //Close connection
+
   }
-  bool new_data = true;
-  while (client.available() && new_data)
-  {
-    String line = client.readStringUntil('}');
-    c += line;
-    c += '}';
-    new_data = false;
+  else {
+    Serial.println("No connection to Wi-Fi!");
   }
+
   String a = c.substring(c.indexOf('{'));
   deserializeJson(doc, a);
 
-//  Serial.println(a);
+  Serial.println(a);
 
-  int red = doc["red1"];
-  int green = doc["green1"];
-  int blue = doc["blue1"];
-  int auto_light = doc["auto_light1"];
-  int light_status = doc["light_status1"];
-  int light_val = doc["light_val"];
-  int door = doc["door"];
+  if (httpCode > 0) {
+    red = doc["red1"];
+    green = doc["green1"];
+    blue = doc["blue1"];
+    auto_light = doc["auto_light1"];
+    light_status = doc["light_status1"];
+    light_val = doc["light_val"];
+    door = doc["door"];
 
-  lights(red, green, blue, light_status, auto_light, light_val, door);
+    lights(red, green, blue, light_status, auto_light, light_val, door);
+  }
 }
 
 
