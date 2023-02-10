@@ -209,7 +209,8 @@ def change_auto2():
 @app.route('/second_floor')
 def second_floor():
     jio = request.args.get('light_val')
-    status['light_val'] = float(jio)
+    if jio:
+        status['light_val'] = float(jio)
     hum = request.args.get('hum')
     temp = request.args.get('temp')
     try:
